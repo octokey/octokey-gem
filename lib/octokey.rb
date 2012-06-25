@@ -80,10 +80,41 @@ class Octokey
   # @return [String] username  The user who successfully authenticated.
   # @raise [InvalidRequest]  If the login failed for some reason.
   def self.login(auth_request, opts = {}, &block)
+    raise ArgumentError, "No public key lookup block given to login" unless block_given?
+
+    username, public_key = signup(auth_request, opts)
+    valid_public_keys = block.call(username)
+    valid_public_keys.map!{ |public_key| format_public_key(unformat_public_key(public_key)) }
+
+    unless valid_public_keys.include? public_key
+      raise InvalidRequest, "Got unknown public key for #{username.inspect}: #{format_public_key(public_key).inspect}"
+    end
+
+    username
+  end
+
+  # Validate a signup request.
+  #
+  # @param [String] auth_request  The string sent by the Octokey client.
+  # @option opts [String] :client_ip  The IP address of the client (see {.new_challenge)}
+  # @option opts [Array<String>] :valid_hostnames  The list of hostnames which clients may
+  #                                                log in from.
+  # @option opts [Time] :time  (Time.now)
+  #
+  # @yield [String] username  The block should (when given a username) return a list of
+  #                           public keys that are associated with that users account.
+  #
+  #                           NOTE: Do not assume that the username passed to the block
+  #                           is logged in. The block is necessarily called before we know
+  #                           this.
+  #
+  # @return [String] username  The username they tried to sign up with.
+  # @return [String] public_key  Their public key
+  # @raise [InvalidRequest]  If the login failed for some reason.
+  def self.signup(auth_request, opts = {})
     client_ip = opts[:client_ip] or raise ArgumentError, "No :client_ip given to login"
     hostnames = opts[:valid_hostnames] or raise ArgumentError, "No :valid_hostnames given to login"
     time = opts[:time] || Time.now
-    raise ArgumentError, "No public key lookup block given to login" unless block_given?
 
     buffer = Octokey::Buffer.new(auth_request)
 
@@ -95,9 +126,6 @@ class Octokey
     signing_alg  = buffer.scan_string
     public_key_b = buffer.scan_buffer
     signature_b  = buffer.scan_buffer
-
-    valid_public_keys = block.call(username)
-    valid_public_keys.map!{ |public_key| format_public_key(unformat_public_key(public_key)) }
 
     public_key, errors = decode_public_key(public_key_b, "ssh-rsa")
     signature, sig_errors = decode_signature(signature_b, signing_alg)
@@ -141,15 +169,11 @@ class Octokey
       errors << "Incorrect signing algorithm: Got #{signing_alg.inspect}, expected: #{SIGNING_ALGORITHM.inspect}"
     end
 
-    unless valid_public_keys.include?(format_public_key(public_key))
-      errors << "Got unknown public key for #{username.inspect}: #{format_public_key(public_key).inspect}"
-    end
-
     unless errors.empty?
       raise InvalidRequest.new("Octokey request failed: #{errors.join(". ")}.")
     end
 
-    username
+    [username, format_public_key(public_key)]
   end
 
   private
