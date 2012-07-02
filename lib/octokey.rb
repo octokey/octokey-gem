@@ -118,7 +118,7 @@ class Octokey
 
     buffer = Octokey::Buffer.new(auth_request)
 
-    challenge    = buffer.scan_string rescue ""
+    challenge    = buffer.scan_string
     request_url  = buffer.scan_string
     username     = buffer.scan_string
     service_name = buffer.scan_string
@@ -144,10 +144,9 @@ class Octokey
     to_verify.add_string signing_alg
     to_verify.add_buffer public_key_b
 
-    expected_digest = OpenSSL::Digest::SHA1.digest(to_verify.raw)
-    raw_asn1 = public_key.public_decrypt(signature)
-
-    errors += validate_digest(raw_asn1, expected_digest)
+    unless public_key.verify(OpenSSL::Digest::SHA1.new, signature, to_verify.raw)
+      errors << "Signature was invalid"
+    end
 
     unless buffer.empty?
       errors << "Request contained trailing bytes"
@@ -249,8 +248,7 @@ class Octokey
     to_sign.add_string SIGNING_ALGORITHM
     to_sign.add_buffer encode_public_key(private_key)
 
-    digest = OpenSSL::Digest::SHA1.digest(to_sign.raw)
-    sigblob = private_key.private_encrypt(digest_into_asn1(digest))
+    sigblob = private_key.sign(OpenSSL::Digest::SHA1.new, to_sign.raw)
 
     sig_buf = Octokey::Buffer.new
     sig_buf.add_string SIGNING_ALGORITHM
@@ -259,54 +257,6 @@ class Octokey
     to_sign.add_buffer(sig_buf)
 
     to_sign.to_s
-  end
-
-  # TODO: replace this by a call to OpenSSL
-  def self.digest_into_asn1(digest)
-    raise "not a valid digest" unless digest.size == 20
-    "0!0\t\x06\x05+\x0E\x03\x02\x1A\x05\x00\x04\x14#{digest}"
-  end
-
-  # TODO: replace this by a call to OpenSSL
-  #
-  # The ASN1 structure should look like this:
-  #
-  # [
-  #  ["SHA-1", nil],
-  #  "digestdigestdigest.."
-  # ]
-  def self.validate_digest(raw_asn1, expected_digest)
-    asn1 = OpenSSL::ASN1.decode(raw_asn1)
-    errors = []
-
-    unless asn1.tag == 16 && asn1.value.size == 2
-      return ["Invalid asn1 was signed"]
-    end
-
-    algorithm_asn1 = asn1.value[0]
-    digest_asn1 = asn1.value[1]
-
-    unless digest_asn1.tag == 4
-      return ["Invalid digest_asn1 was signed"]
-    end
-
-    unless algorithm_asn1.tag == 16 && algorithm_asn1.value.size <= 2
-      return ["Invalid algorithm_asn1 was signed"]
-    end
-
-    unless algorithm_asn1.value[0].value == DIGEST_ALGORITHM
-      errors << "Incorrect digest algorithm: Got #{algorithm_asn1.value[0].value}, expected: #{DIGEST_ALGORITHM.inspect}"
-    end
-
-    unless algorithm_asn1.value.size == 1 || algorithm_asn1.value[1].is_a?(OpenSSL::ASN1::Null)
-      errors << "Invalid parameters passed to SHA1 digest, expected NULL."
-    end
-
-    unless digest_asn1.value == expected_digest
-      errors << "Incorrect message digest"
-    end
-
-    return errors
   end
 
   def self.decode_signature(buffer, expected_alg)
