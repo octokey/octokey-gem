@@ -1,7 +1,7 @@
 require 'base64'
 class Octokey
   class Buffer
-    attr_accessor :buffer, :pos
+    attr_accessor :buffer
 
     # to avoid DOS caused by duplicating enourmous buffers,
     # we limit the maximum size of any string stored to 100k
@@ -16,8 +16,7 @@ class Octokey
 
     def initialize(string = "")
       self.buffer = Base64.decode64(string || "")
-      self.pos = 0
-      buffer.force_encoding('BINARY') if @buffer.respond_to?(:force_encoding)
+      buffer.force_encoding('BINARY') if buffer.respond_to?(:force_encoding)
     end
 
     def raw
@@ -39,7 +38,7 @@ class Octokey
     def scan(n)
       ret, buf = [buffer[0...n], buffer[n..-1]]
       if ret.size < n || !buf
-        raise InvalidBuffer, "Tried to read beyond end of buffer"
+        raise InvalidBuffer, "Buffer too short"
       end
       self.buffer = buf
       ret
@@ -84,11 +83,14 @@ class Octokey
     end
 
     def add_time(time)
-      add_uint64((time.to_f * 1000).to_i)
+      seconds, millis = [time.to_i, (time.usec / 1000.0).round]
+      add_uint64(seconds * 1000 + millis)
     end
 
     def scan_time
-      Time.at(scan_uint64.to_f / 1000)
+      raw = scan_uint64
+      seconds, millis = [raw / 1000, raw % 1000]
+      Time.at(seconds) + (millis / 1000.0)
     end
 
     def add_ip(ipaddr)
@@ -111,40 +113,46 @@ class Octokey
       when 6
         IPAddr.new_ntoh scan(16)
       else
-        raise InvalidBuffer, "Unsupported IP address family: #{type}"
+        raise InvalidBuffer, "Unknown IP family: #{type.inspect}"
       end
     end
 
     def add_varbytes(bytes)
       size = bytes.size
-      raise InvalidBuffer, "String too long: #{size}" if size > MAX_STRING_SIZE
+      raise InvalidBuffer, "Too much length: #{size}" if size > MAX_STRING_SIZE
       add_uint32 size
       self << bytes
     end
 
     def scan_varbytes
       size = scan_uint32
-      raise InvalidBuffer, "String too long: #{size}" if size > MAX_STRING_SIZE
+      raise InvalidBuffer, "Too much length: #{size}" if size > MAX_STRING_SIZE
       scan(size)
     end
 
     def add_string(string)
       if string.respond_to?(:encode)
-        add_varbytes string.encode('BINARY')
+        add_varbytes string.encode('UTF-8').force_encoding('BINARY')
       else
-        add_varbytes string
+        require 'iconv'
+        add_varbytes Iconv.conv('utf-8', 'utf-8', string)
       end
     end
 
     def scan_string
       string = scan_varbytes
-      if string.respond_to?(:encode)
-        string.encode('UTF-8')
+      if string.respond_to?(:force_encoding)
+        string.force_encoding('UTF-8')
+        raise InvalidBuffer, "String not UTF-8" unless string.valid_encoding?
       else
-        string
+        require 'iconv'
+        begin
+          Iconv.conv('utf-8', 'utf-8', string)
+        rescue Iconv::Failure
+          raise InvalidBuffer, "String not UTF-8"
+        end
       end
-    rescue EncodingError => e
-      raise InvalidBuffer, e
+      string
     end
 
     def add_buffer(buffer)
@@ -156,24 +164,37 @@ class Octokey
     end
 
     def add_mpint(x)
-      raise InvalidBuffer, "Got negative mpint" if x < 0
+      raise InvalidBuffer, "Invalid mpint: #{mpint.inspect}" if x < 0
       bytes = OpenSSL::BN.new(x.to_s, 10).to_s(2)
       bytes = "\x00" + bytes if bytes.bytes.first >= 0x80
       add_varbytes(bytes)
     end
 
     def scan_mpint
-      bytes = scan_varbytes
+      raw = scan_varbytes
 
-      if bytes.bytes.first >= 0x80
-        raise InvalidBuffer, "Got negative mpint"
+      first, second = raw.bytes.first(2)
+
+      # ensure only positive numbers with no superflous leading 0s
+      if first >= 0x80 || first == 0x00 && second < 0x80
+        raise InvalidBuffer, "Badly formatted mpint"
       end
 
-      OpenSSL::BN.new(bytes, 2)
+      OpenSSL::BN.new(raw, 2)
     end
 
     def inspect
       "#<Octokey::Buffer @buffer=#{to_s.inspect}>"
+    end
+
+    def scan_all(*tokens)
+      ret = tokens.map do |token|
+        raise "invalid token type: #{token.inspect}" unless respond_to?("scan_#{token}")
+        send("scan_#{token}")
+      end
+
+      raise InvalidBuffer, "Buffer too long" unless empty?
+      ret
     end
   end
 end

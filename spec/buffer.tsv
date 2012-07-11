@@ -1,0 +1,79 @@
+# buffer \t type \t expected-value \t error? \t comment
+#
+# To fully pass this conformance test you should verify that:
+#
+# 1. Each buffer contains exactly one item of the given type.
+# 2. The value of that item matches the third column.
+# 3. Writing the value into a buffer gives you the same buffer back again.
+# 4. On rows marked "error", the exception message SHOULD match.
+#   (while you can use different wording, the kind of error raised MUST be the same)
+#
+gA==	uint8	128	ok	A uint8 example
+TQ==	uint8	77	ok	A uint8 example
+AA==	uint8	0	ok	The lowest possible uint8
+AQ==	uint8	1	ok	The next-lowest possible uint8
+/g==	uint8	254	ok	The next-highest possible uint8
+/w==	uint8	255	ok	The highest possible uint8
+TTg=	uint8	Buffer too long	error	Trailing bytes
+	uint8	Buffer too short	error	Empty buffer
+
+AAABOHbFfDo=	time	2012-07-11T16:00:50.234Z	ok	A time example
+AAAAAAAAAAA=	time	1970-01-01T00:00:00.000Z	ok	The earliest possible time
+AAACAlfNCMQ=	time	2040-01-02T03:04:05.060Z	ok	A time after 2038 (http://en.wikipedia.org/wiki/Year_2038_problem)
+//////////8=	time	584556019-04-03T14:25:51.615Z	ok	latest possible time
+AAABOHb/OJBA	time	Buffer too long	error	Trailing bytes
+T/2ycGI==	time	Buffer too short	error	5/8 bytes
+T/2yRg==	time	Buffer too short	error	4/8 bytes
+gA==	time	Buffer too short	error	1/8 bytes
+	time	Buffer too short	error	0/8 bytes
+
+BH8AAAE=	ip	127.0.0.1	ok	An IPv4 example (localhost)
+BAgIBAQ=	ip	8.8.4.4	ok	An IPv4 example (google public DNS)
+BgEnAAAAAAAAAAAAAAAAAAE=	ip	127::1	ok	An IPv6 example (localhost)
+BiABSGBIYAAAAAAAAAAAiIg=	ip	2001:4860:4860::8888	ok	An IPv6 example (google public DNS)
+BAAAAAA=	ip	0.0.0.0	ok	The first IPv4 address
+BP////8=	ip	255.255.255.255	ok	The last IPv4 address
+BgAAAAAAAAAAAAAAAAAAAAA=	ip	::	ok	The first IPv6 address
+Bv////////////////////8=	ip	ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff	ok	The last IPv6 address
+gkCIQAk=	ip	Unknown IP family: 130	error	only 4 and 6 are supported
+BhCv8g==	ip	Buffer too short	error	IPv6 prefix, 3 / 16 bytes
+BBCv	ip	Buffer too short	error	IPv4 prefix, 2 / 4 bytes
+	ip	Buffer too short	error	Empty buffer
+BAoAAARAhECB	ip	Buffer too long	error	IPv4 prefix
+BhI0VngAAAAAAAAAAJh2VDJAhECB	ip	Buffer too long	error	IPv6 prefix
+
+AAAAC2hlbGxvIHdvcmxk	string	hello world	ok	Example string
+AAAAAA==	string		ok	Empty string
+AAAADWVuY3ljbG9ww6ZkaWE=	string	encyclopædia	ok	String containing BMP UTF-8
+AAAADHF1YXZlcjog8J2FoA==	string	quaver: 𝅘𝅥𝅮	ok	String containing non-BMP UTF-8 (U+1D160)
+AAAABQBmb28A	string	\x00foo\x00	ok	String contains NULL bytes
+AAAABGFiY8g=	string	String not UTF-8	error	Invalid last byte
+AAAAA2ZvbyI=	string	Buffer too long	error	Trailing bytes
+	string	Buffer too short	error	Empty buffer
+AAAAA0E=	string	Buffer too short	error	only 1/3 bytes in string
+AAA=	string	Buffer too short	error	incomplete length prefix
+AAAATw==	string	Buffer too short	error	length is present, but string absent
+/////w==	string	Too much length: 4294967295	error	4gb string... (though it's absent)
+
+AAAABBAgMEA=	bytes	\x10\x20\x30\x40	ok	Example bytes
+AAAAAA==	bytes		ok	Empty bytes
+AAAAAwABAg==	bytes	\x00\x01\x02	ok	Bytes with NULL
+AAAACf/u3cy7qpmIdw==	bytes	\xff\xee\xdd\xcc\xbb\xaa\x99\x88\x77	ok	Bytes with 0xff
+	bytes	Buffer too short	error	Empty buffer
+AAEAAA==	bytes	Buffer too short	error	Only length present, no bytes
+BQo=	bytes	Buffer too short	error	Incomplete length prefix
+AAAAA7uq3Vg=	bytes	Buffer too long	error	Trailing bytes
+AAAAyBUg	bytes	Buffer too short	error	Only 2/200 bytes present
+EsBM4w== bytes	Too much length: 314592483	error	300MB (thankfully absent)
+
+AAAAASA=	mpint	32	ok	Example multi-precision integer
+AAAAAgD/	mpint	255	ok	Example with 0-prefix to avoid negativity
+AAABAQEAAAAAAAAAaOb1ifPLFFiItLecNyZdG0jt0pIjv4cjEyTolqjP4JjrWqht5/NmfwkZkl0GG/eU+eslseEFVeLbF5P7LdYTOWQS3VVGWcPtGw6oeTLfhp1RZJDmkkSJuvPLWOD/2wY2n4Uxw2aUc1o43lP9IwKffZ4x7m5Z8PVSEiIKLsKqOIRqpsPXF0c9Dd+M/FPWcpH2tbg+ACqWkbggIfa+vTqi29vR1SX+tckItHoYgHIkDaJnH2QUA8zbQH3rc78ZNxmwQ2PB4JIntwjJPHHpr3mS5hFBk1XTImcj1pJ0FWOuYqufciWtMoKyC8nJ0Bb2gQIaFPFkUGWHw88h	mpint	32317006071311007484493895237680372175326150891472064373579534958365689608253016077025862134931110863117450013928990979398198520686349575073072519919835263053614712869890235173758289561539115831709685663873976319771581240662146367918170630665919724687618629758709856186109709113973389999518112303208992426608469015986486191774207255809645707847257247251583686554637456060748507916854887287304525742769468196920822463784249313690835118005370848347364224817465644803864719170741042337319019550074901735539037513076142934879176870801869287771721729543685611017142102541535891363725950666715678754308385661894796765286177	Example > 2 ** 2048
+AAAAAv//	mpint	Badly formatted mpint	error	Negative number
+AAAAAwAB/w==	mpint	Badly formatted mpint	error	Extra leading 0s
+	mpint	Buffer too short	error	Empty buffer
+AAI=	mpint	Buffer too short	error	Entire length is not present
+AAAAEA==	mpint	Buffer too short	error	Only length present
+AAAAEBMj	mpint	Buffer too short	error	Only 2/16 bytes present
+AAAAAjRWeA==	mpint	Buffer too long	error	Trailing bytes
+ABAAAA==	mpint	Too much length: 1048576	error	Hundreds of megabytes of number

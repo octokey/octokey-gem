@@ -22,7 +22,7 @@ class Octokey
   # You can generate a suitable token to use as an hmac_secret from the
   # command line:
   #
-  # $ head -c 48 /dev/urandom | base64
+  # $ head -c 48 /dev/random | base64
   #
   # @param [String] hmac_secret
   def self.hmac_secret=(hmac_secret)
