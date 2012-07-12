@@ -33,6 +33,7 @@ class Octokey
 
     def <<(bytes)
       buffer << bytes
+      self
     end
 
     def scan(n)
@@ -47,6 +48,7 @@ class Octokey
     def add_uint8(x)
       raise InvalidBuffer, "Invalid uint8: #{x}" if x < 0 || x >= 2 ** 8
       buffer << [x].pack("C")
+      self
     end
 
     def scan_uint8
@@ -56,6 +58,7 @@ class Octokey
     def add_uint32(x)
       raise InvalidBuffer, "Invalid uint32: #{x}" if x < 0 || x >= 2 ** 32
       buffer << [x].pack("N")
+      self
     end
 
     def scan_uint32
@@ -66,6 +69,7 @@ class Octokey
       raise InvalidBuffer, "Invalid uint64: #{x}" if x < 0 || x >= 2 ** 64
       add_uint32(x >> 32 & 0xffff_ffff)
       add_uint32(x & 0xffff_ffff)
+      self
     end
 
     def scan_uint64
@@ -76,6 +80,7 @@ class Octokey
       raise InvalidBuffer, "Invalid uint128: #{x}" if x < 0 || x >= 2 ** 128
       add_uint64(x >> 64 & 0xffff_ffff_ffff_ffff)
       add_uint64(x & 0xffff_ffff_ffff_ffff)
+      self
     end
 
     def scan_uint128
@@ -85,6 +90,7 @@ class Octokey
     def add_time(time)
       seconds, millis = [time.to_i, (time.usec / 1000.0).round]
       add_uint64(seconds * 1000 + millis)
+      self
     end
 
     def scan_time
@@ -103,6 +109,7 @@ class Octokey
       else
         raise InvalidBuffer, "Unsupported IP address: #{ipaddr.to_s}"
       end
+      self
     end
 
     def scan_ip
@@ -137,6 +144,7 @@ class Octokey
         require 'iconv'
         add_varbytes Iconv.conv('utf-8', 'utf-8', string)
       end
+      self
     end
 
     def scan_string
@@ -157,6 +165,7 @@ class Octokey
 
     def add_buffer(buffer)
       add_varbytes buffer.raw
+      self
     end
 
     def scan_buffer
@@ -168,6 +177,7 @@ class Octokey
       bytes = OpenSSL::BN.new(x.to_s, 10).to_s(2)
       bytes = "\x00" + bytes if bytes.bytes.first >= 0x80
       add_varbytes(bytes)
+      self
     end
 
     def scan_mpint
