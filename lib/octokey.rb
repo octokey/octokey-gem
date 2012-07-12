@@ -1,4 +1,5 @@
 require File.expand_path('octokey/buffer', File.dirname(__FILE__))
+require File.expand_path('octokey/challenge', File.dirname(__FILE__))
 require 'ipaddr'
 require 'securerandom'
 require 'uri'
