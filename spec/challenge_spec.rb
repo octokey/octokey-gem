@@ -6,14 +6,14 @@ describe Octokey::Challenge do
 
     if valid == "ok"
       it "should validate #{comment} challenge.tsv:#{i + 1}" do
-        c = Octokey::Challenge.from_buffer(Octokey::Buffer.new(base64))
+        c = Octokey::Challenge.from_string(base64)
 
         c.errors(:client_ip => expected_ip, :current_time => Time.iso8601(time)).should == []
       end
     else
 
       it "should find all errors when #{comment} challenge.tsv:#{i + 1}" do
-        c = Octokey::Challenge.from_buffer(Octokey::Buffer.new(base64))
+        c = Octokey::Challenge.from_string(base64)
 
         c.errors(:client_ip => expected_ip, :current_time => Time.iso8601(time)).sort.join(", ").should == errors
       end

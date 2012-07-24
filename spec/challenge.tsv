@@ -16,5 +16,5 @@ AwAAATh9QH5LBH8AAAEAAAAgL/vv6TcOf32f5iUsapi1eW3N2CBOv/WON6Bp4g+awKQAAAAUK7ovSBPp
 AwAAATh9QHZ7BH8AAAEAAAAgL/vv6TcOf32f5iUsapi1eW3N2CBOv/WON6Bp4g+awKUAAAAUK7ovSBPpGjeqh5L8IVZMXg6gxsA=	2012-07-12T22:12:54.986Z	127.0.0.1	error	Challenge HMAC mismatch	date mismatch, signature would be correct with provided date
 AwAAATh9QH5LBH8AAAEAAAAhL/vv6TcOf32f5iUsapi1eW3N2CBOv/WON6Bp4g+awKUAAAAAFCu6L0gT6Ro3qoeS/CFWTF4OoMbA	2012-07-12T22:12:58.700Z	127.0.0.1	error	Challenge HMAC mismatch, Challenge random mismatch	trailing byte in random data, signature valid if removed
 AwAAATh9IfH7BH8AAAIAAAAFMTIzNDUAAAAUK7ovSBPpGjeqh5L8IVZMXg6gxsA=	2012-07-12T22:12:58.700Z	127.0.0.1	error	Challenge HMAC mismatch, Challenge IP mismatch, Challenge random mismatch, Challenge too old	Everything wrong at once
-AwAAATh9QH5LBH8AAAEAAAAgL/vv6TcOf32f5iUsapi1e	2012-07-12T22:12:58.700Z	127.0.0.1	error	Buffer too short	truncation
+AwAAATh9QH5LBH8AAAEAAAAgL/vv6TcOf32f5iUsapi1	2012-07-12T22:12:58.700Z	127.0.0.1	error	Buffer too short	truncation
 AwAAATh9QH5LBH8AAAEAAAAgL/vv6TcOf32f5iUsapi1eW3N2CBOv/WON6Bp4g+awKUAAAAUK7ovSBPpGjeqh5L8IVZMXg6gxsBm	2012-07-12T22:12:58.700Z	127.0.0.1	error	Buffer too long	trailing byte

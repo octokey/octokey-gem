@@ -1,7 +1,7 @@
 require 'base64'
 class Octokey
   class Buffer
-    attr_accessor :buffer
+    attr_accessor :buffer, :invalid_buffer
 
     # to avoid DOS caused by duplicating enourmous buffers,
     # we limit the maximum size of any string stored to 100k
@@ -17,6 +17,7 @@ class Octokey
     def initialize(string = "")
       self.buffer = Base64.decode64(string || "")
       buffer.force_encoding('BINARY') if buffer.respond_to?(:force_encoding)
+      self.invalid_buffer = "Badly formatted Base64" unless to_s == string
     end
 
     def raw
@@ -37,6 +38,7 @@ class Octokey
     end
 
     def scan(n)
+      raise InvalidBuffer, invalid_buffer if invalid_buffer
       ret, buf = [buffer[0...n], buffer[n..-1]]
       if ret.size < n || !buf
         raise InvalidBuffer, "Buffer too short"
@@ -203,8 +205,12 @@ class Octokey
         send("scan_#{token}")
       end
 
-      raise InvalidBuffer, "Buffer too long" unless empty?
+      scan_end
       ret
+    end
+
+    def scan_end
+      raise InvalidBuffer, "Buffer too long" unless empty?
     end
   end
 end

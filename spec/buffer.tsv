@@ -22,7 +22,7 @@ AAAAAAAAAAA=	time	1970-01-01T00:00:00.000Z	ok	The earliest possible time
 AAACAlfNCMQ=	time	2040-01-02T03:04:05.060Z	ok	A time after 2038 (http://en.wikipedia.org/wiki/Year_2038_problem)
 //////////8=	time	584556019-04-03T14:25:51.615Z	ok	latest possible time
 AAABOHb/OJBA	time	Buffer too long	error	Trailing bytes
-T/2ycGI==	time	Buffer too short	error	5/8 bytes
+T/2ycGI=	time	Buffer too short	error	5/8 bytes
 T/2yRg==	time	Buffer too short	error	4/8 bytes
 gA==	time	Buffer too short	error	1/8 bytes
 	time	Buffer too short	error	0/8 bytes

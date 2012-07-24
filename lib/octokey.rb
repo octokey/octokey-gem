@@ -1,5 +1,8 @@
 require File.expand_path('octokey/buffer', File.dirname(__FILE__))
 require File.expand_path('octokey/challenge', File.dirname(__FILE__))
+require File.expand_path('octokey/public_key', File.dirname(__FILE__))
+require File.expand_path('octokey/auth_request', File.dirname(__FILE__))
+
 require 'ipaddr'
 require 'securerandom'
 require 'uri'
@@ -47,20 +50,7 @@ class Octokey
   #
   # @return [String]
   def self.new_challenge(opts = {})
-    client_ip = opts[:client_ip] or raise ArgumentError, "No :client_ip given to new_challenge_for"
-    time = opts[:time] || Time.now
-
-    client_ip = IPAddr.new(client_ip.to_s)
-    buffer = Octokey::Buffer.new
-
-    buffer.add_uint8 Octokey::CHALLENGE_VERSION
-    buffer.add_uint8 Octokey.hmac_secret_fingerprint
-    buffer.add_time  time
-    buffer.add_ip    client_ip
-    buffer.add_varbytes SecureRandom.random_bytes(32)
-    buffer.add_varbytes OpenSSL::HMAC.digest("sha1", Octokey.hmac_secret, buffer.raw)
-
-    buffer.to_s
+    Octokey::Challenge.generate(opts).to_s
   end
 
   # Attempt to login with the given auth_request.
@@ -132,7 +122,7 @@ class Octokey
     signature, sig_errors = decode_signature(signature_b, signing_alg)
 
     errors += sig_errors
-    errors += validate_challenge(challenge, client_ip, time)
+    errors += Octokey::Challenge.from_string(challenge).errors(opts)
 
     hostname = URI.parse(request_url).host
 
@@ -184,59 +174,6 @@ class Octokey
 
   def self.hmac_secret_fingerprint
     @hmac_secret_fingerprint ||= OpenSSL::Digest::SHA1.digest(hmac_secret).bytes.first
-  end
-
-  def self.validate_challenge(challenge, expected_ip, expected_time = Time.now)
-    buffer = Octokey::Buffer.new challenge
-    errors = []
-
-    version = buffer.scan_uint8
-    if version != Octokey::CHALLENGE_VERSION
-      errors << "Challenge Version number is incorrect: Got #{version} expected #{Octokey::CHALLENGE_VERSION}"
-    end
-
-    fingerprint = buffer.scan_uint8
-    if fingerprint != hmac_secret_fingerprint
-      errors << "Challenge HMAC was signed with a different secret: Got #{fingerprint.inspect}, expected: #{hmac_secret_fingerprint.inspect}"
-    end
-
-    time = buffer.scan_time
-    puts time.inspect
-    if expected_time - time > 5 * 60
-      errors << "Challenge Timestamp is too dated: Got #{time.to_i}, expected > #{expected_time.to_i - 5 * 60}"
-    end
-
-    if time - expected_time > 5
-      errors << "Challenge Timestamp is too new: Got #{time.to_i}, expected < #{expected_time.to_i + 5}"
-    end
-
-    client_ip = buffer.scan_ip
-    if client_ip != expected_ip
-      errors << "Client IP address mismatch: Got #{client_ip}, expected: #{expected_ip}"
-    end
-
-    random = buffer.scan_varbytes
-    hmac = buffer.scan_varbytes
-
-    if !buffer.empty?
-      errors << "Challenge contained trailing bytes"
-    end
-
-    rehash = Octokey::Buffer.new
-    rehash.add_uint8 version
-    rehash.add_uint8 fingerprint
-    rehash.add_time  time
-    rehash.add_ip    client_ip
-    rehash.add_varbytes random
-    expected_hmac = OpenSSL::HMAC.digest("sha1", Octokey.hmac_secret, rehash.raw)
-
-    if hmac != expected_hmac
-      errors << "Challenge HMAC was incorrect: Got #{hmac.inspect}, expected: #{expected_hmac.inspect}"
-    end
-
-    errors
-  rescue InvalidBuffer => e
-    errors + [e.message]
   end
 
   def self.sign_challenge(challenge, username, request_url, private_key)

@@ -8,4 +8,8 @@ Gem::Specification.new do |s|
   s.authors       = ['Conrad Irwin']
   s.files         = Dir["lib/**/*.rb"]
   s.require_paths = ["lib"]
+
+  s.add_development_dependency 'rspec'
+  s.add_development_dependency 'active_support'
+  s.add_development_dependency 'i18n'
 end

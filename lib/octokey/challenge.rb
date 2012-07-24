@@ -45,11 +45,12 @@ class Octokey
     # The resulting challenge may not be valid! You should call {valid?} on it before
     # making assumptions.
     #
-    # @param [Octokey::Buffer] buffer  The buffer containing the challenge
+    # @param [String] string  A return value of {Octokey::Challenge.to_s}
     # @return [Octokey::Challenge]
     # @raise [Octokey::InvalidBuffer]
     #
-    def self.from_buffer(buffer)
+    def self.from_string(string)
+      buffer = Octokey::Buffer.new(string)
       new.instance_eval do
         begin
           self.version = buffer.scan_uint8
