@@ -195,6 +195,14 @@ class Octokey
       OpenSSL::BN.new(raw, 2)
     end
 
+    def scan_public_key
+      Octokey::PublicKey.from_buffer(scan_buffer)
+    end
+
+    def add_public_key(public_key)
+      add_buffer public_key.to_buffer
+    end
+
     def inspect
       "#<Octokey::Buffer @buffer=#{to_s.inspect}>"
     end
@@ -211,6 +219,15 @@ class Octokey
 
     def scan_end
       raise InvalidBuffer, "Buffer too long" unless empty?
+    end
+
+    def ==(other)
+      self.hash = other.hash && self.raw == other.raw
+    end
+    alias_method :eql?, :==
+
+    def hash
+      self.class.hash ^ self.raw.hash
     end
   end
 end

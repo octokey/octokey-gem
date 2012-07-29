@@ -89,9 +89,9 @@ class Octokey
       elsif expected_type && type != expected_type
         ["Public key type mismatch"]
       elsif type != TYPE
-        ["Unsupported public key type"]
+        ["Public key type unsupported"]
       elsif n.num_bits < SSH_RSA_MINIMUM_MODULUS_SIZE
-        ["RSA modulus too small"]
+        ["Public key too small"]
       else
         []
       end

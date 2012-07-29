@@ -110,12 +110,10 @@ class Octokey
       expected_ip  = IPAddr(opts[:client_ip])
       current_time = opts[:current_time] || Time.now
 
+      return [invalid_buffer] unless invalid_buffer.nil?
+      return ["Challenge version mismatch"] unless version == CHALLENGE_VERSION
+
       errors = []
-
-      errors << invalid_buffer if invalid_buffer
-      errors << "Challenge version mismatch" unless version == CHALLENGE_VERSION
-      return errors unless errors == []
-
       errors << "Challenge too old"          unless current_time < time + MAX_AGE
       errors << "Challenge too new"          unless current_time > time + MIN_AGE
       errors << "Challenge IP mismatch"      unless client_ip == expected_ip
@@ -125,13 +123,19 @@ class Octokey
       errors
     end
 
+    # Return a the challenge serialized into a buffer.
+    #
+    # @return [String]
+    def to_buffer
+      unsigned_buffer.
+        add_varbytes(digest)
+    end
+
     # Return a Base64-encoded copy of this challenge serialized into a buffer.
     #
     # @return [String]
     def to_s
-      unsigned_buffer.
-        add_varbytes(digest).
-        to_s
+      to_buffer.to_s
     end
 
     # Return a string suitable for identifying this challenge while debugging.
@@ -148,7 +152,7 @@ class Octokey
     #
     # @return [String]
     def expected_digest
-      OpenSSL::HMAC.digest(HMAC_ALGORITHM, Octokey.hmac_secret, unsigned_buffer.raw)
+      OpenSSL::HMAC.digest(HMAC_ALGORITHM, Octokey::Config.hmac_secret, unsigned_buffer.raw)
     end
 
     # A buffer containing everything except the signature
