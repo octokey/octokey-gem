@@ -180,7 +180,7 @@ class Octokey
       errors
 
     rescue URI::InvalidURIError
-      ["Auth request url invalid"]
+      ["Request url invalid"]
     end
 
     # Get the buffer containing everything other than the signature.
@@ -194,7 +194,7 @@ class Octokey
         add_string(service_name).
         add_string(auth_method).
         add_string(signing_algorithm).
-        add_buffer(public_key.to_buffer)
+        add_public_key(public_key)
     end
 
     # Get the signature buffer using the given key.

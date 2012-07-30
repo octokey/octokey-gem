@@ -52,21 +52,6 @@ class Octokey
       "#<Octokey::Buffer @buffer=#{to_s.inspect}>"
     end
 
-    # Compare this buffer to another.
-    # @param [Octokey::Buffer] other
-    # @return [Boolean] are they equal?
-    def ==(other)
-      self.hash = other.hash && self.raw == other.raw
-    end
-    # Used by builtin ruby containers
-    alias_method :eql?, :==
-
-    # Get a hash code suitable for use in a Hash.
-    # @return [Fixnum]
-    def hash
-      self.class.hash ^ self.raw.hash
-    end
-
     # Is this buffer empty?
     # @return [Boolean]
     def empty?
@@ -147,24 +132,6 @@ class Octokey
       (scan_uint32 << 32) + scan_uint32
     end
 
-    # Add an unsigned 128-bit number to this buffer
-    # @param [Fixnum] x
-    # @return [Octokey::Buffer] self
-    # @raise [Octokey::InvalidBuffer] if x is not a uint128
-    def add_uint128(x)
-      raise InvalidBuffer, "Invalid uint128: #{x}" if x < 0 || x >= 2 ** 128
-      add_uint64(x >> 64 & 0xffff_ffff_ffff_ffff)
-      add_uint64(x & 0xffff_ffff_ffff_ffff)
-      self
-    end
-
-    # Destructively read an unsigned 128-bit number from this buffer
-    # @return [Fixnum]
-    # @raise [Octokey::InvalidBuffer]
-    def scan_uint128
-      (scan_uint64 << 64) + scan_uint64
-    end
-
     # Add a timestamp to this buffer
     #
     # Times are stored to millisecond precision.
@@ -197,10 +164,10 @@ class Octokey
     def add_ip(ipaddr)
       if ipaddr.ipv4?
         add_uint8(4)
-        add_uint32(ipaddr.to_i)
+        buffer << ipaddr.hton
       elsif ipaddr.ipv6?
         add_uint8(6)
-        add_uint128(ipaddr.to_i)
+        buffer << ipaddr.hton
       else
         raise InvalidBuffer, "Unsupported IP address: #{ipaddr.to_s}"
       end

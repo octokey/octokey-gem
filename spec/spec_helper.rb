@@ -1,3 +1,5 @@
+require 'simplecov'
+SimpleCov.start
 require './lib/octokey'
 require 'active_support/core_ext'
 Octokey::Config.hmac_secret = "12345"

@@ -73,6 +73,18 @@ describe Octokey do
       Octokey.new(a, :username => "frodo", :client_ip => "127.0.0.1",
                      :public_keys => [$public_key]).should_not be_can_log_in
     end
+
+    it "should raise an error if invalid public keys are used" do
+      a = Octokey.sign_challenge(Octokey.new_challenge(:client_ip => "127.0.0.1"),
+                                 :request_url => "https://example.com",
+                                 :username => "frodo",
+                                 :private_key => $key)
+
+      lambda{
+        Octokey.new(a, :username => "frodo", :client_ip => "127.0.0.1",
+                       :public_keys => ["ooops"]).can_log_in?
+      }.should raise_error(ArgumentError)
+    end
   end
 
   describe "can_sign_up?" do

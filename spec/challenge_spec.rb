@@ -9,6 +9,7 @@ describe Octokey::Challenge do
         c = Octokey::Challenge.from_string(base64)
 
         c.errors(:client_ip => expected_ip, :current_time => Time.iso8601(time)).should == []
+        c.should be_valid(:client_ip => expected_ip, :current_time => Time.iso8601(time))
       end
     else
 
@@ -16,6 +17,7 @@ describe Octokey::Challenge do
         c = Octokey::Challenge.from_string(base64)
 
         c.errors(:client_ip => expected_ip, :current_time => Time.iso8601(time)).sort.join(", ").should == errors
+        c.should_not be_valid(:client_ip => expected_ip, :current_time => Time.iso8601(time))
       end
     end
 
