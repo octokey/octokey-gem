@@ -17,17 +17,15 @@ AQ==	uint8	1	ok	The next-lowest possible uint8
 TTg=	uint8	Buffer too long	error	Trailing bytes
 	uint8	Buffer too short	error	Empty buffer
 
-AAABOHbFfDo=	time	2012-07-11T16:00:50.234Z	ok	A time example
-AAAAAAAAAAA=	time	1970-01-01T00:00:00.000Z	ok	The earliest possible time
-AAACAlfNCMQ=	time	2040-01-02T03:04:05.060Z	ok	A time after 2038 (http://en.wikipedia.org/wiki/Year_2038_problem)
-AAD///////8=	time	10889-08-02T05:31:50.655Z	ok	Latest allowed time
-AAEAAAAAAAA=	time	Invalid time	error	2**48 is disallowed for safe interoperability
-//////////8=	time	Invalid time	error	2**64 is larger than many implementations can support
-AAABOHb/OJBA	time	Buffer too long	error	Trailing bytes
-T/2ycGI=	time	Buffer too short	error	5/8 bytes
-T/2yRg==	time	Buffer too short	error	4/8 bytes
-gA==	time	Buffer too short	error	1/8 bytes
-	time	Buffer too short	error	0/8 bytes
+AAABOHbFfDo=	timestamp	1342022450234	ok	A time example
+AAAAAAAAAAA=	timestamp	0	ok	The earliest possible time
+AAACAlfNCMQ=	timestamp	2209086245060	ok	A time after 2038 (http://en.wikipedia.org/wiki/Year_2038_problem)
+//////////8=	timestamp	18446744073709551615	ok	Latest possible timestamp
+AAABOHb/OJBA	timestamp	Buffer too long	error	Trailing bytes
+T/2ycGI=	timestamp	Buffer too short	error	5/8 bytes
+T/2yRg==	timestamp	Buffer too short	error	4/8 bytes
+gA==	timestamp	Buffer too short	error	1/8 bytes
+	timestamp	Buffer too short	error	0/8 bytes
 
 BH8AAAE=	ip	127.0.0.1	ok	An IPv4 example (localhost)
 BAgIBAQ=	ip	8.8.4.4	ok	An IPv4 example (google public DNS)

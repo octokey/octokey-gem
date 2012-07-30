@@ -77,33 +77,22 @@ class Octokey
 
     # Add a timestamp to this buffer
     #
-    # Times are stored to millisecond precision, and are limited to
-    # 2 **48 to give plenty of margin for implementations using doubles
-    # as the backing for their date time, which nicely gives us a range
-    # ending just after the year 10000.
-    #
-    # @param [Time] time
+    # @param [Fixnum] x milliseconds since the epoch
     # @return [Octokey::Buffer] self
     # @raise [Octokey::InvalidBuffer] if the time is too far into the future
-    def add_time(time)
-      seconds, millis = [time.to_i, (time.usec / 1000.0).round]
-      raw = seconds * 1000 + millis
-      raise Octokey::InvalidBuffer, "Invalid time" if raw >= 2 ** 48
-      add_uint64(raw)
+    def add_timestamp(x)
+      raise InvalidBuffer, "Invalid timestamp: #{x}" if x < 0 || x >= 2 ** 64
+      add_uint32(x >> 32 & 0xffff_ffff)
+      add_uint32(x & 0xffff_ffff)
       self
     end
 
     # Destructively read a timestamp from this buffer
     #
-    # Times are stored to millisecond precision
-    #
-    # @return [Time]
+    # @return [Fixnum] milliseconds since the epoch
     # @raise [Octokey::InvalidBuffer]
-    def scan_time
-      raw = scan_uint64
-      raise Octokey::InvalidBuffer, "Invalid time" if raw >= 2 ** 48
-      seconds, millis = [raw / 1000, raw % 1000]
-      Time.at(seconds).utc + (millis / 1000.0)
+    def scan_timestamp
+      (scan_uint32 << 32) + scan_uint32
     end
 
     # Add an IPv4  or IPv6 address to this buffer
@@ -302,24 +291,6 @@ class Octokey
     # @raise [Octokey::InvalidBuffer]
     def scan_uint32
       scan(4).unpack("N").first
-    end
-
-    # Add an unsigned 64-bit number to this buffer
-    # @param [Fixnum] x
-    # @return [Octokey::Buffer] self
-    # @raise [Octokey::InvalidBuffer] if x is not a uint64
-    def add_uint64(x)
-      raise InvalidBuffer, "Invalid uint64: #{x}" if x < 0 || x >= 2 ** 64
-      add_uint32(x >> 32 & 0xffff_ffff)
-      add_uint32(x & 0xffff_ffff)
-      self
-    end
-
-    # Destructively read an unsigned 64-bit number from this buffer
-    # @return [Fixnum]
-    # @raise [Octokey::InvalidBuffer]
-    def scan_uint64
-      (scan_uint32 << 32) + scan_uint32
     end
 
     # Check whether a string is valid utf-8

@@ -30,13 +30,13 @@ class Octokey
     RANDOM_SIZE = 32
     # Hash algorithm to use in the HMAC
     HMAC_ALGORITHM = "sha1"
-    # The maximum age of a valid challenge
-    MAX_AGE = 5 * 60
-    # The minimum age of a valid challenge
-    MIN_AGE = -30
+    # The maximum age of a valid challenge (milliseconds)
+    MAX_AGE = 5 * 60_000
+    # The minimum age of a valid challenge (milliseconds)
+    MIN_AGE = -30_000
 
     private
-    attr_accessor :version, :time, :client_ip, :random, :digest, :invalid_buffer
+    attr_accessor :version, :timestamp, :client_ip, :random, :digest, :invalid_buffer
 
     public
 
@@ -55,8 +55,8 @@ class Octokey
         begin
           self.version = buffer.scan_uint8
           if version == CHALLENGE_VERSION
-            self.time, self.client_ip, self.random, self.digest =
-              buffer.scan_all(:time, :ip, :varbytes, :varbytes)
+            self.timestamp, self.client_ip, self.random, self.digest =
+              buffer.scan_all(:timestamp, :ip, :varbytes, :varbytes)
           end
         rescue InvalidBuffer => e
           self.invalid_buffer = e.message
@@ -79,7 +79,7 @@ class Octokey
         current_time = opts[:current_time] || Time.now
 
         self.version = CHALLENGE_VERSION
-        self.time = current_time
+        self.timestamp = current_time.to_i * 1000 + current_time.usec / 1000
         self.client_ip = expected_ip
         self.random = SecureRandom.random_bytes(RANDOM_SIZE)
         self.digest = expected_digest
@@ -109,13 +109,14 @@ class Octokey
     def errors(opts)
       expected_ip  = IPAddr(opts[:client_ip])
       current_time = opts[:current_time] || Time.now
+      current_time = current_time.to_i * 1000 + current_time.usec / 1000
 
       return [invalid_buffer] unless invalid_buffer.nil?
       return ["Challenge version mismatch"] unless version == CHALLENGE_VERSION
 
       errors = []
-      errors << "Challenge too old"          unless current_time < time + MAX_AGE
-      errors << "Challenge too new"          unless current_time > time + MIN_AGE
+      errors << "Challenge too old"          unless current_time < timestamp + MAX_AGE
+      errors << "Challenge too new"          unless current_time > timestamp + MIN_AGE
       errors << "Challenge IP mismatch"      unless client_ip == expected_ip
       errors << "Challenge random mismatch"  unless random.size == RANDOM_SIZE
       errors << "Challenge HMAC mismatch"    unless digest == expected_digest
@@ -142,7 +143,7 @@ class Octokey
     #
     # @return [String]
     def inspect
-      "#<Octokey::Challenge @version=#{version.inspect} @time=#{time.inspect}" +
+      "#<Octokey::Challenge @version=#{version.inspect} @timestamp=#{timestamp.inspect}" +
         "@client_ip=#{client_ip.inspect}>"
     end
 
@@ -161,7 +162,7 @@ class Octokey
     def unsigned_buffer
       Octokey::Buffer.new.
         add_uint8(version).
-        add_time(time).
+        add_timestamp(timestamp).
         add_ip(client_ip).
         add_varbytes(random)
     end

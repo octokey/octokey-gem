@@ -18,10 +18,10 @@ describe Octokey::Buffer do
             result.should == expected.to_i
             Octokey::Buffer.new.tap{ |x| x.add_uint8(result) }.to_s.should == base64
 
-          when "time"
-            result, _ = buffer.scan_all(:time)
-            result.should be_within(0.0005).of(Time.iso8601(expected))
-            Octokey::Buffer.new.tap{ |x| x.add_time(result) }.to_s.should == base64
+          when "timestamp"
+            result, _ = buffer.scan_all(:timestamp)
+            result.should == expected.to_i
+            Octokey::Buffer.new.tap{ |x| x.add_timestamp(result) }.to_s.should == base64
 
           when "ip"
             result, _ = buffer.scan_all(:ip)
