@@ -30,7 +30,9 @@ describe Octokey::Buffer do
 
           when "string"
             result, _ = buffer.scan_all(:string)
-            result.should == eval(%{"#{expected}"})
+            get_expected = %{"#{expected}"}
+            get_expected.force_encoding('UTF-8') if get_expected.respond_to?(:force_encoding)
+            result.should == eval(get_expected)
             Octokey::Buffer.new.tap{ |x| x.add_string(result) }.to_s.should == base64
 
           when "bytes"
