@@ -138,7 +138,9 @@ class Octokey
   def valid_public_key?
     strings = Octokey::Config.get_public_keys(opts[:username], opts)
     public_keys = strings.map{ |string| Octokey::PublicKey.from_string(string) }
-    raise ArgumentError, "Invalid public key returned to Octokey for #{username}" unless public_keys.all(:valid?)
+    unless public_keys.all?(&:valid?)
+      raise ArgumentError, "Invalid public key returned to Octokey for #{username}"
+    end
     public_keys.include?(auth_request.public_key)
   end
 end
