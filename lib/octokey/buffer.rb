@@ -58,28 +58,6 @@ class Octokey
       buffer.empty?
     end
 
-    # Append raw bytes to this buffer.
-    # @param [String] bytes
-    # @return [Octokey::Buffer] self
-    def <<(bytes)
-      buffer << bytes
-      self
-    end
-
-    # Destructively read bytes from the front of this buffer.
-    # @param [Fixnum] n
-    # @return [String]
-    # @raise [Octokey::InvalidBuffer]
-    def scan(n)
-      raise InvalidBuffer, invalid_buffer if invalid_buffer
-      ret, buf = [buffer[0...n], buffer[n..-1]]
-      if ret.size < n || !buf
-        raise InvalidBuffer, "Buffer too short"
-      end
-      self.buffer = buf
-      ret
-    end
-
     # Add an unsigned 8-bit number to this buffer
     # @param [Fixnum] x
     # @return [Octokey::Buffer] self
@@ -95,41 +73,6 @@ class Octokey
     # @raise [Octokey::InvalidBuffer]
     def scan_uint8
       scan(1).unpack("C").first
-    end
-
-    # Add an unsigned 32-bit number to this buffer
-    # @param [Fixnum] x
-    # @return [Octokey::Buffer] self
-    # @raise [Octokey::InvalidBuffer] if x is not a uint32
-    def add_uint32(x)
-      raise InvalidBuffer, "Invalid uint32: #{x}" if x < 0 || x >= 2 ** 32
-      buffer << [x].pack("N")
-      self
-    end
-
-    # Destructively read an unsigned 32-bit number from this buffer
-    # @return [Fixnum]
-    # @raise [Octokey::InvalidBuffer]
-    def scan_uint32
-      scan(4).unpack("N").first
-    end
-
-    # Add an unsigned 64-bit number to this buffer
-    # @param [Fixnum] x
-    # @return [Octokey::Buffer] self
-    # @raise [Octokey::InvalidBuffer] if x is not a uint64
-    def add_uint64(x)
-      raise InvalidBuffer, "Invalid uint64: #{x}" if x < 0 || x >= 2 ** 64
-      add_uint32(x >> 32 & 0xffff_ffff)
-      add_uint32(x & 0xffff_ffff)
-      self
-    end
-
-    # Destructively read an unsigned 64-bit number from this buffer
-    # @return [Fixnum]
-    # @raise [Octokey::InvalidBuffer]
-    def scan_uint64
-      (scan_uint32 << 32) + scan_uint32
     end
 
     # Add a timestamp to this buffer
@@ -198,7 +141,8 @@ class Octokey
       size = bytes.size
       raise InvalidBuffer, "Too much length: #{size}" if size > MAX_STRING_SIZE
       add_uint32 size
-      self << bytes
+      buffer << bytes
+      self
     end
 
     # Destructively read a length-prefixed number of bytes from this buffer
@@ -223,25 +167,6 @@ class Octokey
     # @raise [Octokey::InvalidBuffer]
     def scan_string
       validate_utf8(scan_varbytes)
-    end
-
-    # Check whether a string is valid utf-8
-    # @param [String] string
-    # @return [String] string
-    # @raise [Octokey::InvalidBuffer] invalid utf-8
-    def validate_utf8(string)
-      if string.respond_to?(:force_encoding)
-        string.force_encoding('UTF-8')
-        raise InvalidBuffer, "String not UTF-8" unless string.valid_encoding?
-        string
-      else
-        require 'iconv'
-        begin
-          Iconv.conv('utf-8', 'utf-8', string)
-        rescue Iconv::Failure
-          raise InvalidBuffer, "String not UTF-8"
-        end
-      end
     end
 
     # Add the length-prefixed contents of another buffer to this one.
@@ -337,6 +262,76 @@ class Octokey
     # @raise [Octokey::InvalidBuffer] if there is still buffer to read.
     def scan_end
       raise InvalidBuffer, "Buffer too long" unless empty?
+    end
+
+    private
+
+    # Destructively read bytes from the front of this buffer.
+    # @param [Fixnum] n
+    # @return [String]
+    # @raise [Octokey::InvalidBuffer]
+    def scan(n)
+      raise InvalidBuffer, invalid_buffer if invalid_buffer
+      ret, buf = [buffer[0...n], buffer[n..-1]]
+      if ret.size < n || !buf
+        raise InvalidBuffer, "Buffer too short"
+      end
+      self.buffer = buf
+      ret
+    end
+
+    # Add an unsigned 32-bit number to this buffer
+    # @param [Fixnum] x
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer] if x is not a uint32
+    def add_uint32(x)
+      raise InvalidBuffer, "Invalid uint32: #{x}" if x < 0 || x >= 2 ** 32
+      buffer << [x].pack("N")
+      self
+    end
+
+    # Destructively read an unsigned 32-bit number from this buffer
+    # @return [Fixnum]
+    # @raise [Octokey::InvalidBuffer]
+    def scan_uint32
+      scan(4).unpack("N").first
+    end
+
+    # Add an unsigned 64-bit number to this buffer
+    # @param [Fixnum] x
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer] if x is not a uint64
+    def add_uint64(x)
+      raise InvalidBuffer, "Invalid uint64: #{x}" if x < 0 || x >= 2 ** 64
+      add_uint32(x >> 32 & 0xffff_ffff)
+      add_uint32(x & 0xffff_ffff)
+      self
+    end
+
+    # Destructively read an unsigned 64-bit number from this buffer
+    # @return [Fixnum]
+    # @raise [Octokey::InvalidBuffer]
+    def scan_uint64
+      (scan_uint32 << 32) + scan_uint32
+    end
+
+    # Check whether a string is valid utf-8
+    # @param [String] string
+    # @return [String] string
+    # @raise [Octokey::InvalidBuffer] invalid utf-8
+    def validate_utf8(string)
+      if string.respond_to?(:force_encoding)
+        string.force_encoding('UTF-8')
+        raise InvalidBuffer, "String not UTF-8" unless string.valid_encoding?
+        string
+      else
+        require 'iconv'
+        begin
+          Iconv.conv('utf-8', 'utf-8', string)
+        rescue Iconv::Failure
+          raise InvalidBuffer, "String not UTF-8"
+        end
+      end
     end
   end
 end
