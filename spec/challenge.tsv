@@ -1,7 +1,8 @@
 # challenge \t time \t client_ip \t valid \t errors \t comment	
 AwAAATh9QH5LBH8AAAEAAAAg4crphs34YEVtBlq6SBuXvxaPspw/xrZevg7y8G4sGO4AAAAUNZB5XhNSefwLx3LXo7bfD9gD0FE=	2012-07-12T22:12:58.700Z	127.0.0.1	ok		example from now
 AwAAATh9QH5LBgAAAAAAAAAAAAAAAAAAAAEAAAAgQeX8WvCI8lvxhdtuxZwsChTCT3YkGjE3XokW8t0D74oAAAAU9ec1/erT9z79bDTi/0zOkLt1gro=	2012-07-12T22:12:58.700Z	::1	ok		example with IPv6
-AwAAAgmsTLsLBH8AAAEAAAAgPh+8E5nClERSRE+fBuOaTgYGysSy1aznwC8CRsdrOvsAAAAUBI0GylIYzCmvWxCpYLzD90b4EG0=	2040-12-31T12:11:20.654Z	127.0.0.1	ok		example from beyond 2038
+# Removing this for now. It doesn't work on old rubies...
+# AwAAAgmsTLsLBH8AAAEAAAAgPh+8E5nClERSRE+fBuOaTgYGysSy1aznwC8CRsdrOvsAAAAUBI0GylIYzCmvWxCpYLzD90b4EG0=	2040-12-31T12:11:20.654Z	127.0.0.1	ok		example from beyond 2038
 AwAAATh9QIzMBH8AAAEAAAAgATuV8uT68x1fMtke3jCfQ9lqIhIpn8PdXUA02ZNF3fYAAAAUK1f4s9oM+r2m0uaM/m2bg9HJH3I=	2012-07-12T22:12:54.986Z	127.0.0.1	ok		example with date slightly ahead
 AwAAATh9QH5LBH8AAAIAAAAgBR8+t8n8taWi2X05Uf3xO+wlamG/uQNOhqDJNs3C9lsAAAAUa4veUjlrnSOmcTl3WCw4JZQxV+8=	2012-07-12T22:12:58.700Z	127.0.0.1	error	Challenge IP mismatch	wrong IP (127.0.0.2 given)
 CQAAATh9QH5LBH8AAAEAAAAggU9GZHwiZ8YNzevWDaprAl5MmXSVS3AqryxgOB5U1eAAAAAUWzL48p09piGp2aLv3SgaQ/HFM+A=	2015-10-07T09:30:30.678Z	127.0.0.1	error	Challenge version mismatch	wrong version (9 instead of 3)
