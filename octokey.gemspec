@@ -14,6 +14,7 @@ $octokey_gem = Gem::Specification.new do |s|
   s.files         = Dir["lib/**/*.rb"]
   s.require_paths = ["lib"]
 
+  s.add_development_dependency 'rake'
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'active_support'
   s.add_development_dependency 'i18n'
