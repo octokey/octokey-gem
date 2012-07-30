@@ -32,7 +32,7 @@ The second step is to handle requests for signup and login:
 
 ```ruby
 get '/signup' do
-  signup = Octokey.new(:auth_request => params['octokey_auth_request'],
+  signup = Octokey.new(params['octokey_auth_request'],
                        :username => params['username'],
                        :client_ip => request.env['CLIENT_IP'])
   if signup.can_sign_up?
@@ -46,7 +46,7 @@ get '/signup' do
 end
 
 get '/login' do
-  login = Octokey.new(:auth_request => params['octokey_auth_request'],
+  login = Octokey.new(params['octokey_auth_request'],
                        :username => params['username'],
                        :client_ip => request.env['CLIENT_IP'])
   if login.can_log_in?
