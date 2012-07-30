@@ -12,6 +12,9 @@ require File.expand_path('octokey/auth_request', File.dirname(__FILE__))
 # Octokey is a private key based login mechanism for websites inspired
 # heavily by, and borrowing algorithms from, OpenSSH.
 class Octokey
+  # The current version of Octokey as a string.
+  VERSION = '0.1.pre.4'
+
   # Raised when you try and access details of an invalid octokey request.
   # If you always check .can_log_in? or .can_sign_up? first, you should not
   # see this exception.
