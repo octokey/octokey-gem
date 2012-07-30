@@ -1,7 +1,13 @@
 class Octokey
+  # With Octokey each user has multiple public keys associated with their account.
+  #
+  # This class deals with parsing, formatting, and verifying public keys that are
+  # input.
   class PublicKey
 
+    # The only type of PublicKey that Octokey supports is RSA.
     TYPE = "ssh-rsa"
+    # In order to guard against client errors, we disallow short, weak, keys.
     SSH_RSA_MINIMUM_MODULUS_SIZE = 768
 
     private
@@ -30,7 +36,7 @@ class Octokey
     # will return false.
     #
     # @param [Octokey::Buffer] buffer
-    # @param [String] (nil) expected_type
+    # @param [String] expected_type (nil)
     # @return [Octokey::PublicKey]
     def self.from_buffer(buffer, expected_type = nil)
       new.instance_eval do
@@ -57,7 +63,7 @@ class Octokey
     # If parsing fails then the returned Octokey::PublicKey's .valid? method
     # will return false.
     #
-    # @param [String]  the string to parse
+    # @param [String] string  the string to parse
     # @return [Octokey::PublicKey]
     def self.from_string(string)
       if string =~ /\A([^\s]+)\s+([^\s]+)/

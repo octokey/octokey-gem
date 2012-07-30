@@ -1,9 +1,19 @@
 class Octokey
+  # An AuthRequest is sent by the client when it wants to log in or sign up.
+  #
+  # It includes an {Octokey::Challenge} so that we can verify its recency, and
+  # also the username the user wishes to log in as, the url that they wish to 
+  # log in to, and the public key corresponding to their private key.
+  #
+  # You can create an Octokey::AuthRequest from any string, and later determine
+  # whether or not it was valid by calling {#valid?}
   class AuthRequest
+    # The service name is used to check that the client knows which protocol it is speaking.
     SERVICE_NAME      = "octokey-auth"
+    # The auth method indicates that the client wants to use publickey authentication.
     AUTH_METHOD       = "publickey"
+    # The signing algorithm is copied straight from SSH.
     SIGNING_ALGORITHM = "ssh-rsa"
-    DIGEST_ALGORITHM  = "SHA1"
 
     attr_accessor :challenge_buffer, :request_url, :username, :service_name,
                   :auth_method, :signing_algorithm, :public_key, :signature_buffer,
@@ -116,10 +126,16 @@ class Octokey
       errors(opts) == []
     end
 
+    # Get the Base64-encoded version of this auth request.
+    #
+    # @return [String]
     def to_s
       unsigned_buffer.add_buffer(signature_buffer).to_s
     end
 
+    # Get a string that identifies this auth request while debugging
+    #
+    # @return [String]
     def inspect
       "#<Octokey::AuthRequest #{to_s.inspect}>"
     end
@@ -128,8 +144,8 @@ class Octokey
 
     # What are the problems with the signature? 
     #
-    # @param [OpenSSL::PKey::RSA] the public key
-    # @param [Octokey::Buffer] the signature buffer
+    # @param [OpenSSL::PKey::RSA] key  the public key
+    # @param [Octokey::Buffer] signature_buffer  the signature buffer
     # @return [Array<String>]
     def signature_errors(key, signature_buffer)
       algorithm_used, signature = signature_buffer.scan_all(:string, :varbytes)
@@ -183,7 +199,7 @@ class Octokey
 
     # Get the signature buffer using the given key.
     #
-    # @param [OpenSSL::PKey::RSA] the private key
+    # @param [OpenSSL::PKey::RSA] private_key
     # @return [Octokey::Buffer]
     def signature_buffer_with(private_key)
       Octokey::Buffer.new.

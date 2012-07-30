@@ -42,7 +42,7 @@ class Octokey
 
     # Parse a challenge.
     #
-    # The resulting challenge may not be valid! You should call {valid?} on it before
+    # The resulting challenge may not be valid! You should call {#valid?} on it before
     # making assumptions.
     #
     # @param [String] string  A return value of {Octokey::Challenge.to_s}

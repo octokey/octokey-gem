@@ -1,4 +1,5 @@
 class Octokey
+  # All configuration for Octokey is stored here.
   class Config
     # Configure the hmac_secret for Octokey.
     #
@@ -49,22 +50,38 @@ class Octokey
       @auth_request_block = block
     end
 
+    # Get the HMAC secret previously configured
+    # @return [String]
     def self.hmac_secret
       @hmac_secret or raise "You must configure Octokey::Config.hmac_secret = FOO"
     end
 
+    # Get the valid hostnames previously configured
+    # @return [Array<String>]
     def self.valid_hostnames
       @valid_hostnames or raise "You must configure Octokey::Config.valid_hostnames = ['example.com']"
     end
 
+    # Get a new Octokey::Challenge instance
+    # @param [String] string  The Base64-encoded challenge
+    # @param [Hash] opts  Passed to Octokey.new
+    # @return [Octokey::Challenge]
     def self.get_challenge(string, opts)
       @challenge_block.call(string, opts)
     end
 
+    # Get a new Octokey::AuthRequest instance
+    # @param [String] string  The Base64-encoded auth_request
+    # @param [Hash] opts  Passed to Octokey.new
+    # @return [Octokey::AuthRequest]
     def self.get_auth_request(string, opts)
       @auth_request_block.call(string, opts)
     end
 
+    # Get the public keys associated with the given username.
+    # @param [String] username  The claimed username
+    # @param [Hash] opts  Passed to Octokey.new
+    # @return [Array<String>]
     def self.get_public_keys(username, opts)
       @public_keys_block.call(username, opts)
     end

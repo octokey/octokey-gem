@@ -1,5 +1,14 @@
 require 'base64'
 class Octokey
+  # Buffers are used throughout Octokey to provide a bijective serialization format.
+  # For any valid buffer, there's exactly one valid object, and vice-versa.
+  #
+  # Mostly we used Base64-encoded buffers to avoid problems with potentially 8-bit
+  # unsafe channels. You should take care not to perform any operations on the Base64
+  # encoded form as there are many accepted formats for Base64-encoding a given string.
+  #
+  # In the current implementation, reading out of a buffer is a destructive operation,
+  # you should first .dup any buffer that you want to read more than once.
   class Buffer
     attr_accessor :buffer, :invalid_buffer
 
@@ -7,6 +16,9 @@ class Octokey
     # we limit the maximum size of any string stored to 100k
     MAX_STRING_SIZE = 100 * 1024
 
+    # Create a new buffer from raw bits.
+    #
+    # @param [String] raw
     def self.from_raw(raw = "")
       ret = new
       ret.buffer = raw.dup
@@ -14,29 +26,65 @@ class Octokey
       ret
     end
 
+    # Create a new buffer from a Base64-encoded string.
+    # @param [String] string
     def initialize(string = "")
       self.buffer = Base64.decode64(string || "")
       buffer.force_encoding('BINARY') if buffer.respond_to?(:force_encoding)
       self.invalid_buffer = "Badly formatted Base64" unless to_s == string
     end
 
+    # Get the underlying bits contained in this buffer.
+    # @return [String]
     def raw
       buffer
     end
-
-    def empty?
-      buffer.empty?
-    end
-
+    
+    # Get the canonical Base64 representation of this buffer.
+    # @return [String]
     def to_s
       Base64.encode64(buffer).gsub("\n", "")
     end
 
+    # Get a string that describes this buffer suitably for debugging.
+    # @return [String]
+    def inspect
+      "#<Octokey::Buffer @buffer=#{to_s.inspect}>"
+    end
+
+    # Compare this buffer to another.
+    # @param [Octokey::Buffer] other
+    # @return [Boolean] are they equal?
+    def ==(other)
+      self.hash = other.hash && self.raw == other.raw
+    end
+    # Used by builtin ruby containers
+    alias_method :eql?, :==
+
+    # Get a hash code suitable for use in a Hash.
+    # @return [Fixnum]
+    def hash
+      self.class.hash ^ self.raw.hash
+    end
+
+    # Is this buffer empty?
+    # @return [Boolean]
+    def empty?
+      buffer.empty?
+    end
+
+    # Append raw bytes to this buffer.
+    # @param [String] bytes
+    # @return [Octokey::Buffer] self
     def <<(bytes)
       buffer << bytes
       self
     end
 
+    # Destructively read bytes from the front of this buffer.
+    # @param [Fixnum] n
+    # @return [String]
+    # @raise [Octokey::InvalidBuffer]
     def scan(n)
       raise InvalidBuffer, invalid_buffer if invalid_buffer
       ret, buf = [buffer[0...n], buffer[n..-1]]
@@ -47,26 +95,44 @@ class Octokey
       ret
     end
 
+    # Add an unsigned 8-bit number to this buffer
+    # @param [Fixnum] x
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer] if x is not a uint8
     def add_uint8(x)
       raise InvalidBuffer, "Invalid uint8: #{x}" if x < 0 || x >= 2 ** 8
       buffer << [x].pack("C")
       self
     end
 
+    # Destructively read an unsigned 8-bit number from this buffer
+    # @return [Fixnum]
+    # @raise [Octokey::InvalidBuffer]
     def scan_uint8
       scan(1).unpack("C").first
     end
 
+    # Add an unsigned 32-bit number to this buffer
+    # @param [Fixnum] x
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer] if x is not a uint32
     def add_uint32(x)
       raise InvalidBuffer, "Invalid uint32: #{x}" if x < 0 || x >= 2 ** 32
       buffer << [x].pack("N")
       self
     end
 
+    # Destructively read an unsigned 32-bit number from this buffer
+    # @return [Fixnum]
+    # @raise [Octokey::InvalidBuffer]
     def scan_uint32
       scan(4).unpack("N").first
     end
 
+    # Add an unsigned 64-bit number to this buffer
+    # @param [Fixnum] x
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer] if x is not a uint64
     def add_uint64(x)
       raise InvalidBuffer, "Invalid uint64: #{x}" if x < 0 || x >= 2 ** 64
       add_uint32(x >> 32 & 0xffff_ffff)
@@ -74,10 +140,17 @@ class Octokey
       self
     end
 
+    # Destructively read an unsigned 64-bit number from this buffer
+    # @return [Fixnum]
+    # @raise [Octokey::InvalidBuffer]
     def scan_uint64
       (scan_uint32 << 32) + scan_uint32
     end
 
+    # Add an unsigned 128-bit number to this buffer
+    # @param [Fixnum] x
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer] if x is not a uint128
     def add_uint128(x)
       raise InvalidBuffer, "Invalid uint128: #{x}" if x < 0 || x >= 2 ** 128
       add_uint64(x >> 64 & 0xffff_ffff_ffff_ffff)
@@ -85,22 +158,42 @@ class Octokey
       self
     end
 
+    # Destructively read an unsigned 128-bit number from this buffer
+    # @return [Fixnum]
+    # @raise [Octokey::InvalidBuffer]
     def scan_uint128
       (scan_uint64 << 64) + scan_uint64
     end
 
+    # Add a timestamp to this buffer
+    #
+    # Times are stored to millisecond precision.
+    #
+    # @param [Time] time
+    # @return [Octokey::Buffer] self
     def add_time(time)
       seconds, millis = [time.to_i, (time.usec / 1000.0).round]
       add_uint64(seconds * 1000 + millis)
       self
     end
 
+    # Destructively read a timestamp from this buffer
+    #
+    # Times are stored to millisecond precision
+    #
+    # @return [Time]
+    # @raise [Octokey::InvalidBuffer]
     def scan_time
       raw = scan_uint64
       seconds, millis = [raw / 1000, raw % 1000]
       Time.at(seconds) + (millis / 1000.0)
     end
 
+    # Add an IPv4  or IPv6 address to this buffer
+    #
+    # @param [IPAddr] ipaddr
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer] not a valid IP address
     def add_ip(ipaddr)
       if ipaddr.ipv4?
         add_uint8(4)
@@ -114,6 +207,9 @@ class Octokey
       self
     end
 
+    # Destructively read an IPv4 or IPv6 address from this buffer.
+    # @return [IPAddr]
+    # @raise [Octokey::InvalidBuffer]
     def scan_ip
       type = scan_uint8
       case type
@@ -126,34 +222,51 @@ class Octokey
       end
     end
 
+    # Add a length-prefixed number of bytes to this buffer
+    # @param [String] bytes
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer] if there are too any bytes
     def add_varbytes(bytes)
+      bytes.force_encoding('BINARY') if bytes.respond_to?(:force_encoding)
       size = bytes.size
       raise InvalidBuffer, "Too much length: #{size}" if size > MAX_STRING_SIZE
       add_uint32 size
       self << bytes
     end
 
+    # Destructively read a length-prefixed number of bytes from this buffer
+    # @return [String] bytes
+    # @raise [Octokey::InvalidBuffer]
     def scan_varbytes
       size = scan_uint32
       raise InvalidBuffer, "Too much length: #{size}" if size > MAX_STRING_SIZE
       scan(size)
     end
 
+    # Add a length-prefixed number of bytes of UTF-8 string to this buffer
+    # @param [String] string
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer]  if the string is not utf-8
     def add_string(string)
-      if string.respond_to?(:encode)
-        add_varbytes string.encode('UTF-8').force_encoding('BINARY')
-      else
-        require 'iconv'
-        add_varbytes Iconv.conv('utf-8', 'utf-8', string)
-      end
-      self
+      add_varbytes(validate_utf8(string))
     end
 
+    # Destructively read a length-prefixed number of bytes of UTF-8 string
+    # @return [String] with encoding == 'utf-8' on ruby-1.9
+    # @raise [Octokey::InvalidBuffer]
     def scan_string
-      string = scan_varbytes
+      validate_utf8(scan_varbytes)
+    end
+
+    # Check whether a string is valid utf-8
+    # @param [String] string
+    # @return [String] string
+    # @raise [Octokey::InvalidBuffer] invalid utf-8
+    def validate_utf8(string)
       if string.respond_to?(:force_encoding)
         string.force_encoding('UTF-8')
         raise InvalidBuffer, "String not UTF-8" unless string.valid_encoding?
+        string
       else
         require 'iconv'
         begin
@@ -162,18 +275,28 @@ class Octokey
           raise InvalidBuffer, "String not UTF-8"
         end
       end
-      string
     end
 
+    # Add the length-prefixed contents of another buffer to this one.
+    # @param [Octokey::Buffer] buffer
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer]
     def add_buffer(buffer)
       add_varbytes buffer.raw
       self
     end
 
+    # Destrictively read a length-prefixed buffer out of this one.
+    # @return [Octokey::Buffer]
+    # @raise [Octokey::InvalidBuffer]
     def scan_buffer
       Octokey::Buffer.from_raw scan_varbytes
     end
 
+    # Add an unsigned multi-precision integer to this buffer
+    # @param [OpenSSL::BN,Fixnum] x
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer] if x is negative or enourmous
     def add_mpint(x)
       raise InvalidBuffer, "Invalid mpint: #{mpint.inspect}" if x < 0
       bytes = OpenSSL::BN.new(x.to_s, 10).to_s(2)
@@ -182,6 +305,9 @@ class Octokey
       self
     end
 
+    # Destructively read an unsigned multi-precision integer from this buffer
+    # @return [OpenSSL::BN]
+    # @raise [Octokey::InvalidBuffer]
     def scan_mpint
       raw = scan_varbytes
 
@@ -195,18 +321,41 @@ class Octokey
       OpenSSL::BN.new(raw, 2)
     end
 
+    # Destructively read a public key from this buffer
+    #
+    # NOTE: the returned public key may not be valid, you must call
+    # .valid? on it before trying to use it.
+    #
+    # @return [Octokey::PublicKey]
+    # @raise [Octokey::InvalidBuffer]
     def scan_public_key
       Octokey::PublicKey.from_buffer(scan_buffer)
     end
 
+    # Add a public key to this buffer
+    # @param [Octokey::PublicKey] public_key
+    # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer]
     def add_public_key(public_key)
       add_buffer public_key.to_buffer
     end
 
-    def inspect
-      "#<Octokey::Buffer @buffer=#{to_s.inspect}>"
-    end
-
+    # Destructively read the entire buffer.
+    #
+    # It's strongly recommended that you use this method to parse buffers, as it
+    # remembers to verify that the buffer doesn't contain any trailing bytes; and
+    # will return nothing if the buffer is invalid, so your code doesn't have to 
+    # deal with half-parsed buffers.
+    #
+    # The tokens should correspond to the scan_X methods defined here. For example:
+    #  type, e, n = buffer.scan_all(:string, :mpint, :mpint)
+    # is equivalent to:
+    #  type, e, n, _ = [buffer.scan_string, buffer.scan_mpint, buffer.scan_mpint,
+    #                   buffer.scan_end]
+    #
+    # @param [Array<Symbol>] tokens
+    # @return [Array<Object>]
+    # @raise [Octokey::InvalidBuffer]
     def scan_all(*tokens)
       ret = tokens.map do |token|
         raise "invalid token type: #{token.inspect}" unless respond_to?("scan_#{token}")
@@ -217,17 +366,10 @@ class Octokey
       ret
     end
 
+    # Verify that the buffer has been completely scanned.
+    # @raise [Octokey::InvalidBuffer] if there is still buffer to read.
     def scan_end
       raise InvalidBuffer, "Buffer too long" unless empty?
-    end
-
-    def ==(other)
-      self.hash = other.hash && self.raw == other.raw
-    end
-    alias_method :eql?, :==
-
-    def hash
-      self.class.hash ^ self.raw.hash
     end
   end
 end

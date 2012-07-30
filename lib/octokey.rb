@@ -8,6 +8,8 @@ require File.expand_path('octokey/challenge', File.dirname(__FILE__))
 require File.expand_path('octokey/public_key', File.dirname(__FILE__))
 require File.expand_path('octokey/auth_request', File.dirname(__FILE__))
 
+# Octokey is a private key based login mechanism for websites inspired
+# heavily by, and borrowing algorithms from, OpenSSH.
 class Octokey
   # Raised when you try and access details of an invalid octokey request.
   # If you always check .can_log_in? or .can_sign_up? first, you should not
@@ -40,9 +42,9 @@ class Octokey
   #
   # @param [String] challenge  The base64-encoded challenge issued by the server.
   # @param [Hash] opts
-  # @option [String] :username  Which username would you like to log in as.
-  # @option [String] :request_url  Which page would you like to log in to.
-  # @option [OpenSSL::PKey::RSA] :private_key  The private key with which to sign the challenge.
+  # @option opts [String] :username  Which username would you like to log in as.
+  # @option opts [String] :request_url  Which page would you like to log in to.
+  # @option opts [OpenSSL::PKey::RSA] :private_key  The private key with which to sign the challenge.
   # @return [String]  The Base64 encoded auth_request
   def self.sign_challenge(challenge, opts)
     Octokey::AuthRequest.generate({:challenge => challenge}.merge(opts)).to_s
@@ -55,8 +57,8 @@ class Octokey
   #
   # @param [String] auth_request  The Base64 encoded auth request from the client.
   # @param [Hash] opts
-  # @option [String] :username  The username that the user wishes to log in as.
-  # @option [String,IPAddr] :client_ip  The ip address of the client.
+  # @option opts [String] :username  The username that the user wishes to log in as.
+  # @option opts [String,IPAddr] :client_ip  The ip address of the client.
   def initialize(auth_request, opts)
     raise ArgumentError, "no :username given" unless opts[:username]
     raise ArgumentError, "no :client_ip given" unless opts[:client_ip]
