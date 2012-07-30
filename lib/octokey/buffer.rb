@@ -77,13 +77,19 @@ class Octokey
 
     # Add a timestamp to this buffer
     #
-    # Times are stored to millisecond precision.
+    # Times are stored to millisecond precision, and are limited to
+    # 2 **48 to give plenty of margin for implementations using doubles
+    # as the backing for their date time, which nicely gives us a range
+    # ending just after the year 10000.
     #
     # @param [Time] time
     # @return [Octokey::Buffer] self
+    # @raise [Octokey::InvalidBuffer] if the time is too far into the future
     def add_time(time)
       seconds, millis = [time.to_i, (time.usec / 1000.0).round]
-      add_uint64(seconds * 1000 + millis)
+      raw = seconds * 1000 + millis
+      raise Octokey::InvalidBuffer, "Invalid time" if raw >= 2 ** 48
+      add_uint64(raw)
       self
     end
 
@@ -95,8 +101,9 @@ class Octokey
     # @raise [Octokey::InvalidBuffer]
     def scan_time
       raw = scan_uint64
+      raise Octokey::InvalidBuffer, "Invalid time" if raw >= 2 ** 48
       seconds, millis = [raw / 1000, raw % 1000]
-      Time.at(seconds) + (millis / 1000.0)
+      Time.at(seconds).utc + (millis / 1000.0)
     end
 
     # Add an IPv4  or IPv6 address to this buffer

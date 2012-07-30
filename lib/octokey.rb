@@ -1,5 +1,6 @@
-require 'ipaddr'
+require 'openssl'
 require 'securerandom'
+require 'ipaddr'
 require 'uri'
 
 require File.expand_path('octokey/buffer', File.dirname(__FILE__))
