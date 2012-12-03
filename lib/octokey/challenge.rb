@@ -119,7 +119,7 @@ class Octokey
       errors << "Challenge too new"          unless current_time > timestamp + MIN_AGE
       errors << "Challenge IP mismatch"      unless client_ip == expected_ip
       errors << "Challenge random mismatch"  unless random.size == RANDOM_SIZE
-      errors << "Challenge HMAC mismatch"    unless digest == expected_digest
+      errors << "Challenge HMAC mismatch"    unless time_safe_equals(digest, expected_digest)
 
       errors
     end
@@ -174,6 +174,17 @@ class Octokey
     # @raise [ArgumentError]
     def IPAddr(x)
       x && IPAddr.new(x.to_s) or raise ArgumentError, "no client IP given"
+    end
+
+    # Compare two strings in a manner hard to timing attack
+    #
+    # Useful for comparing digests so that a motivated attacker can't guess the correct
+    # checksum by measuring how long it takes for comparing checksums to fail.
+    #
+    # @param [String] a
+    # @param [String] b
+    def time_safe_equals(a, b)
+      a.hash == b.hash && a == b
     end
   end
 end

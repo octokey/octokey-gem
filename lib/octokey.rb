@@ -13,7 +13,7 @@ require File.expand_path('octokey/auth_request', File.dirname(__FILE__))
 # heavily by, and borrowing algorithms from, OpenSSH.
 class Octokey
   # The current version of Octokey as a string.
-  VERSION = '0.1.pre.4'
+  VERSION = '0.1.pre.5'
 
   # Raised when you try and access details of an invalid octokey request.
   # If you always check .can_log_in? or .can_sign_up? first, you should not
