@@ -39,7 +39,7 @@ class Octokey
     def raw
       buffer
     end
-    
+
     # Get the canonical Base64 representation of this buffer.
     # @return [String]
     def to_s

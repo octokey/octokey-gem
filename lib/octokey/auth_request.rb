@@ -204,7 +204,26 @@ class Octokey
     def signature_buffer_with(private_key)
       Octokey::Buffer.new.
         add_string(SIGNING_ALGORITHM).
-        add_varbytes(private_key.sign(OpenSSL::Digest::SHA1.new, unsigned_buffer.raw))
+        add_varbytes(encrypted_signature(private_key))
+    end
+
+    def encrypted_signature(private_key)
+
+      private_key.private_encrypt(unencrypted_signature)
+    end
+
+    def unencrypted_signature
+      OpenSSL::ASN1::Sequence.new([
+        OpenSSL::ASN1::Sequence.new([
+          OpenSSL::ASN1::ObjectId.new("sha1"),
+          OpenSSL::ASN1::Null.new(nil)
+        ]),
+        OpenSSL::ASN1::OctetString.new(raw_sha1)
+      ]).to_der
+    end
+
+    def raw_sha1
+      Digest::SHA1.digest(unsigned_buffer.raw)
     end
   end
 end
